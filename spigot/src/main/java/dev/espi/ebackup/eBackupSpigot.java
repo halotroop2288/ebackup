@@ -1,5 +1,22 @@
+/*
+   Copyright 2020 EspiDev
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+
 package dev.espi.ebackup;
 
+import dev.espi.ebackup.util.CronUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -17,52 +34,18 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 import static dev.espi.ebackup.eBackup.*;
 
-/*
-   Copyright 2020 EspiDev
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
- */
-
 public class eBackupSpigot extends JavaPlugin implements CommandExecutor, Listener {
+    static {
+        backupUtil = new BackupUtilSpigot();
+    }
 
-    // lock
-    AtomicBoolean isInBackup = new AtomicBoolean(false);
-    AtomicBoolean isInUpload = new AtomicBoolean(false);
-
-    // config options
-    String backupFormat, backupDateFormat;
-    File backupPath;
-    int maxBackups;
-    boolean onlyBackupIfPlayersWereOn;
-    boolean deleteAfterUpload;
-    int compressionLevel;
-
-    String ftpType, ftpHost, ftpUser, ftpPass, ftpPath, sftpPrivateKeyPath, sftpPrivateKeyPassword;
-    int ftpPort;
-    boolean ftpEnable, useSftpKeyAuth;
-
-    boolean backupPluginJars, backupPluginConfs;
-    List<String> filesToIgnore;
-    List<File> ignoredFiles = new ArrayList<>();
+    boolean backupPluginConfs;
 
     BukkitTask bukkitCronTask = null;
 
@@ -114,7 +97,7 @@ public class eBackupSpigot extends JavaPlugin implements CommandExecutor, Listen
         sftpPrivateKeyPath = getConfig().getString("ftp.private-key");
         sftpPrivateKeyPassword = getConfig().getString("ftp.private-key-password");
         ftpPath = getConfig().getString("ftp.path");
-        backupPluginJars = getConfig().getBoolean("backup.pluginjars");
+        backupPluginsAndMods = getConfig().getBoolean("backup.pluginjars");
         backupPluginConfs = getConfig().getBoolean("backup.pluginconfs");
         filesToIgnore = getConfig().getStringList("backup.ignore");
         for (String s : filesToIgnore) {
@@ -138,7 +121,7 @@ public class eBackupSpigot extends JavaPlugin implements CommandExecutor, Listen
                 } else if (onlyBackupIfPlayersWereOn && !playersWereOnSinceLastBackup.get()) {
                     LOGGER.info("No players were detected to have joined since the last backup or server start, skipping backup...");
                 } else {
-                    BackupUtil.doBackup(true);
+                    eBackup.backupUtil.doBackup(true);
 
                     if (Bukkit.getServer().getOnlinePlayers().size() == 0) {
                         playersWereOnSinceLastBackup.set(false);
@@ -150,7 +133,7 @@ public class eBackupSpigot extends JavaPlugin implements CommandExecutor, Listen
 
     @Override
     public void onEnable() {
-        LOGGER.info("Initializing eBackupSpigot...");
+        LOGGER.info("Initializing eBackup...");
 
         Objects.requireNonNull(this.getCommand("ebackup"), "ebackup command not initialized!")
                 .setExecutor(this);
@@ -198,7 +181,7 @@ public class eBackupSpigot extends JavaPlugin implements CommandExecutor, Listen
                 } else {
                     sender.sendMessage(ChatColor.GRAY + "Starting backup (check console logs for details)...");
                     Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), () -> {
-                        BackupUtil.doBackup(true);
+                        backupUtil.doBackup(true);
                         sender.sendMessage(ChatColor.GRAY + "Finished!");
                     });
                 }
@@ -209,14 +192,14 @@ public class eBackupSpigot extends JavaPlugin implements CommandExecutor, Listen
                 } else {
                     sender.sendMessage(ChatColor.GRAY + "Starting backup (check console logs for details)...");
                     Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), () -> {
-                        BackupUtil.doBackup(false);
+                        backupUtil.doBackup(false);
                         sender.sendMessage(ChatColor.GRAY + "Finished!");
                     });
                 }
                 break;
             case "list":
                 sender.sendMessage(ChatColor.AQUA + "Local Backups:");
-                File[] files = getPlugin().backupPath.listFiles();
+                File[] files = backupPath.listFiles();
                 if (files != null) {
                     for (File f : files) {
                         sender.sendMessage(ChatColor.GRAY + "- " + f.getName());
@@ -225,16 +208,16 @@ public class eBackupSpigot extends JavaPlugin implements CommandExecutor, Listen
                 break;
             case "stats":
                 sender.sendMessage(ChatColor.GRAY + "" + ChatColor.STRIKETHROUGH + "=====" + ChatColor.RESET + ChatColor.DARK_AQUA + " Disk Stats " + ChatColor.RESET + ChatColor.GRAY + ChatColor.STRIKETHROUGH + "=====");
-                sender.sendMessage(ChatColor.AQUA + "Total size: " + ChatColor.GRAY + (getPlugin().backupPath.getTotalSpace()/1024/1024/1024) + "GB");
-                sender.sendMessage(ChatColor.AQUA + "Space usable: " + ChatColor.GRAY + (getPlugin().backupPath.getUsableSpace()/1024/1024/1024) + "GB");
-                sender.sendMessage(ChatColor.AQUA + "Space free: " + ChatColor.GRAY + (getPlugin().backupPath.getFreeSpace()/1024/1024/1024) + "GB");
+                sender.sendMessage(ChatColor.AQUA + "Total size: " + ChatColor.GRAY + (backupPath.getTotalSpace()/1024/1024/1024) + "GB");
+                sender.sendMessage(ChatColor.AQUA + "Space usable: " + ChatColor.GRAY + (backupPath.getUsableSpace()/1024/1024/1024) + "GB");
+                sender.sendMessage(ChatColor.AQUA + "Space free: " + ChatColor.GRAY + (backupPath.getFreeSpace()/1024/1024/1024) + "GB");
                 break;
             case "testupload":
                 sender.sendMessage(ChatColor.GRAY + "Starting upload test...");
                 if (sender instanceof Player) {
                     sender.sendMessage(ChatColor.AQUA + "Please check the console for the upload status!");
                 }
-                BackupUtil.testUpload();
+                backupUtil.testUpload();
                 break;
             case "reload":
                 sender.sendMessage(ChatColor.GRAY + "Starting plugin reload...");

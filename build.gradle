@@ -1,5 +1,9 @@
+//file:noinspection GroovyAssignabilityCheck
 plugins {
-	id 'com.github.johnrengelman.shadow' version '7.0.0' apply false
+	id 'java'
+	id 'java-library'
+	id 'maven-publish'
+	id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
 subprojects {
@@ -11,6 +15,7 @@ subprojects {
 	group = rootProject.maven_group
 	version = rootProject.version
 
+	// Ensures all versions have access to common code
 	sourceSets {
 		main {
 			java {
@@ -43,9 +48,11 @@ subprojects {
 	}
 
 	dependencies {
-		if (project != project(":common")) api project(":common")
+		if (project != project(":common")) {
+			api project(":common")
+		}
 		compileOnly('org.jetbrains:annotations:' + project.annotations_version)
-		implementation('com.cronutils:cron-utils:' + project.cron_utils_version)
+		shadow implementation('com.cronutils:cron-utils:' + project.cron_utils_version)
 	}
 
 	publishing {

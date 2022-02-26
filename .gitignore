@@ -1,13 +1,22 @@
 # Ignore everything
-/*
+*
 
-# Folders
+# Allowed Folders
+!/gradle
+
 !/common
 !/fabric
-!/gradle
 !/spigot
 
-# Files
+# Re-ignore
+*/.gradle/
+*/.idea/
+*/build/
+*/out/
+
+*.iml
+
+# Allowed Files
 !.gitignore
 !gradle.properties
 !settings.gradle

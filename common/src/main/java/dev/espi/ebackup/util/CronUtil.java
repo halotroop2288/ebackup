@@ -1,4 +1,4 @@
-package dev.espi.ebackup;
+package dev.espi.ebackup.util;
 
 import com.cronutils.descriptor.CronDescriptor;
 import com.cronutils.model.Cron;
@@ -6,6 +6,7 @@ import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.model.time.ExecutionTime;
 import com.cronutils.parser.CronParser;
+import dev.espi.ebackup.eBackup;
 
 import java.time.ZonedDateTime;
 import java.util.Locale;
