@@ -2,8 +2,9 @@
 /*
 
 # Folders
-!/gradle
+!/common
 !/fabric
+!/gradle
 !/spigot
 
 # Files

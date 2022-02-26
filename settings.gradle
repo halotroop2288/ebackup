@@ -10,4 +10,6 @@ pluginManagement {
 
 rootProject.name = 'eBackup'
 
-include 'spigot', 'fabric'
+include 'common', 'spigot', 'fabric'
+project(":spigot").name = 'ebackup-spigot'
+project(":fabric").name = 'ebackup-fabric'

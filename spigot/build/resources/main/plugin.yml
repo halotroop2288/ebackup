@@ -1,9 +1,9 @@
-name: eBackup
-version: '1.0.0'
+name: eBackupSpigot
+version: '1.3.0'
 authors: [ EspiDev, halotroop2288 ]
 description: A simple and stable backup plugin.
 
-main: dev.espi.dev.espi.ebackup.eBackup
+main: dev.espi.ebackup.eBackupSpigot
 api-version: 1.18
 
 commands:

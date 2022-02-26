@@ -28,7 +28,6 @@ import java.util.Optional;
 */
 
 public class CronUtil {
-
     static Cron cron;
     static ExecutionTime executionTime;
     static ZonedDateTime nextExecution;
@@ -47,10 +46,10 @@ public class CronUtil {
                 .instance();
 
         CronParser parser = new CronParser(cronDefinition);
-        cron = parser.parse(eBackup.getPlugin().crontask);
+        cron = parser.parse(eBackup.cronTask);
         cron.validate();
 
-        eBackup.getPlugin().getLogger().info("Configured the cron task to be: " + CronDescriptor.instance(Locale.UK).describe(cron));
+        eBackup.LOGGER.info("Configured the cron task to be: " + CronDescriptor.instance(Locale.UK).describe(cron));
 
         executionTime = ExecutionTime.forCron(cron);
         Optional<ZonedDateTime> zdt = executionTime.nextExecution(ZonedDateTime.now());

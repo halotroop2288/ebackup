@@ -1,7 +1,4 @@
-plugins {
-	id 'com.github.johnrengelman.shadow'
-}
-
+//file:noinspection GroovyAssignabilityCheck
 repositories {
 	maven {
 		name = 'Spigot'
@@ -12,26 +9,15 @@ repositories {
 
 dependencies {
 	compileOnly 'org.spigotmc:spigot-api:1.18.1-R0.1-SNAPSHOT'
-	compileOnly 'commons-io:commons-io:2.11.0'
 	compileOnly 'com.jcraft:jsch:0.1.55'
 	compileOnly 'commons-net:commons-net:3.8.0'
-	compileOnly 'com.cronutils:cron-utils:9.1.6'
 }
 
 processResources {
-	def props = [version: project.version]
-	inputs.properties props
-	expand props
-	filteringCharset 'UTF-8'
-	filesMatching('plugin.yml') {
-		expand props
+	inputs.property "version", project.version
+	filteringCharset "UTF-8"
+
+	filesMatching("plugin.yml") {
+		expand "version": project.version
 	}
 }
-
-shadowJar {
-	dependencies {
-		include(dependency(':ebackup-common'))
-	}
-}
-
-tasks.build.dependsOn tasks.shadowJar

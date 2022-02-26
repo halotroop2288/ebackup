@@ -35,12 +35,12 @@ public class BackupUtil {
 
     // delete old backups (when limit reached)
     private static void checkMaxBackups() {
-        if (eBackup.getPlugin().maxBackups <= 0) return;
+        if (eBackupSpigot.getPlugin().maxBackups <= 0) return;
 
         int backups = 0;
         SortedMap<Long, File> m = new TreeMap<>(); // oldest files to newest
 
-        File[] files = eBackup.getPlugin().backupPath.listFiles();
+        File[] files = eBackupSpigot.getPlugin().backupPath.listFiles();
         if (files != null) {
             for (File f : files) {
                 if (f.getName().endsWith(".zip")) {
@@ -51,7 +51,7 @@ public class BackupUtil {
         }
 
         // delete old backups
-        while (backups-- >= eBackup.getPlugin().maxBackups) {
+        while (backups-- >= eBackupSpigot.getPlugin().maxBackups) {
             m.get(m.firstKey()).delete();
             m.remove(m.firstKey());
         }
@@ -62,16 +62,16 @@ public class BackupUtil {
     @SuppressWarnings("BusyWait")
     public static void doBackup(boolean uploadToServer) {
         List<File> tempIgnore = new ArrayList<>();
-        eBackup.getPlugin().getLogger().info("Starting backup...");
+        eBackupSpigot.getPlugin().getLogger().info("Starting backup...");
 
         // do not backup when plugin is disabled
-        if (!eBackup.getPlugin().isEnabled()) {
-            eBackup.getPlugin().getLogger().warning("Unable to start a backup, because the plugin is disabled by the server!");
+        if (!eBackupSpigot.getPlugin().isEnabled()) {
+            eBackupSpigot.getPlugin().getLogger().warning("Unable to start a backup, because the plugin is disabled by the server!");
             return;
         }
 
         // prevent other processes from backing up at the same time
-        eBackup.getPlugin().isInBackup.set(true);
+        eBackupSpigot.getPlugin().isInBackup.set(true);
 
         File currentWorkingDirectory = new File(Paths.get(".").toAbsolutePath().normalize().toString());
 
@@ -80,9 +80,9 @@ public class BackupUtil {
             File[] files = new File("plugins").listFiles();
             if (files != null) {
                 for (File f : files) {
-                    if ((!eBackup.getPlugin().backupPluginJars && f.getName().endsWith(".jar")) || (!eBackup.getPlugin().backupPluginConfs && f.isDirectory())) {
+                    if ((!eBackupSpigot.getPlugin().backupPluginJars && f.getName().endsWith(".jar")) || (!eBackupSpigot.getPlugin().backupPluginConfs && f.isDirectory())) {
                         tempIgnore.add(f);
-                        eBackup.getPlugin().ignoredFiles.add(f);
+                        eBackupSpigot.getPlugin().ignoredFiles.add(f);
                     }
                 }
             }
@@ -91,13 +91,13 @@ public class BackupUtil {
             checkMaxBackups();
 
             // zip
-            SimpleDateFormat formatter = new SimpleDateFormat(eBackup.getPlugin().backupDateFormat);
-            String fileName = eBackup.getPlugin().backupFormat.replace("{DATE}", formatter.format(new Date()));
-            FileOutputStream fos = new FileOutputStream(eBackup.getPlugin().backupPath + "/" + fileName + ".zip");
+            SimpleDateFormat formatter = new SimpleDateFormat(eBackupSpigot.getPlugin().backupDateFormat);
+            String fileName = eBackupSpigot.getPlugin().backupFormat.replace("{DATE}", formatter.format(new Date()));
+            FileOutputStream fos = new FileOutputStream(eBackupSpigot.getPlugin().backupPath + "/" + fileName + ".zip");
             ZipOutputStream zipOut = new ZipOutputStream(fos);
 
             // set zip compression level
-            zipOut.setLevel(eBackup.getPlugin().compressionLevel);
+            zipOut.setLevel(eBackupSpigot.getPlugin().compressionLevel);
 
             // backup worlds first
             for (World w : Bukkit.getWorlds()) {
@@ -111,7 +111,7 @@ public class BackupUtil {
 
                 // check if world is in ignored list
                 boolean skip = false;
-                for (File f : eBackup.getPlugin().ignoredFiles) {
+                for (File f : eBackupSpigot.getPlugin().ignoredFiles) {
                     if (f.getCanonicalPath().equals(worldFolder.getCanonicalPath())) {
                         skip = true;
                         break;
@@ -121,7 +121,7 @@ public class BackupUtil {
 
                 // manually trigger world save (needs to be run sync)
                 AtomicBoolean saved = new AtomicBoolean(false);
-                Bukkit.getScheduler().runTask(eBackup.getPlugin(), () -> {
+                Bukkit.getScheduler().runTask(eBackupSpigot.getPlugin(), () -> {
                     w.save();
                     saved.set(true);
                 });
@@ -131,25 +131,25 @@ public class BackupUtil {
 
                 w.setAutoSave(false); // make sure autosave doesn't screw everything over
 
-                eBackup.getPlugin().getLogger().info("Backing up world " + w.getName() + " " + worldPath + "...");
+                eBackupSpigot.getPlugin().getLogger().info("Backing up world " + w.getName() + " " + worldPath + "...");
                 zipFile(worldFolder, worldPath, zipOut);
 
                 w.setAutoSave(true);
 
                 // ignore in dfs
                 tempIgnore.add(worldFolder);
-                eBackup.getPlugin().ignoredFiles.add(worldFolder);
+                eBackupSpigot.getPlugin().ignoredFiles.add(worldFolder);
             }
 
             // dfs all other files
-            eBackup.getPlugin().getLogger().info("Backing up other files...");
+            eBackupSpigot.getPlugin().getLogger().info("Backing up other files...");
             zipFile(currentWorkingDirectory, "", zipOut);
             zipOut.close();
             fos.close();
 
             // upload to ftp/sftp
-            if (uploadToServer && eBackup.getPlugin().ftpEnable) {
-                uploadTask(eBackup.getPlugin().backupPath + "/" + fileName + ".zip", false);
+            if (uploadToServer && eBackupSpigot.getPlugin().ftpEnable) {
+                uploadTask(eBackupSpigot.getPlugin().backupPath + "/" + fileName + ".zip", false);
             }
 
         } catch (Exception e) {
@@ -160,42 +160,42 @@ public class BackupUtil {
             }
             // restore tempignore
             for (File f : tempIgnore) {
-                eBackup.getPlugin().ignoredFiles.remove(f);
+                eBackupSpigot.getPlugin().ignoredFiles.remove(f);
             }
 
             // unlock
-            eBackup.getPlugin().isInBackup.set(false);
+            eBackupSpigot.getPlugin().isInBackup.set(false);
         }
-        eBackup.getPlugin().getLogger().info("Local backup complete!");
+        eBackupSpigot.getPlugin().getLogger().info("Local backup complete!");
     }
 
     public static void testUpload() {
         try {
-            File temp = new File(eBackup.getPlugin().getDataFolder() + "/uploadtest.txt");
+            File temp = new File(eBackupSpigot.getPlugin().getDataFolder() + "/uploadtest.txt");
             temp.createNewFile();
             uploadTask(temp.toString(), true);
         } catch (Exception e) {
             e.printStackTrace();
-            eBackup.getPlugin().getLogger().warning("Error creating temporary file.");
+            eBackupSpigot.getPlugin().getLogger().warning("Error creating temporary file.");
         }
     }
 
     private static void uploadTask(String fileName, boolean testing) {
-        if (eBackup.getPlugin().isInUpload.get()) {
-            eBackup.getPlugin().getLogger().warning("A upload was scheduled to happen now, but an upload was detected to be in progress. Skipping...");
+        if (eBackupSpigot.getPlugin().isInUpload.get()) {
+            eBackupSpigot.getPlugin().getLogger().warning("A upload was scheduled to happen now, but an upload was detected to be in progress. Skipping...");
             return;
         }
 
-        boolean isSFTP = eBackup.getPlugin().ftpType.equals("sftp"), isFTP = eBackup.getPlugin().ftpType.equals("ftp");
+        boolean isSFTP = eBackupSpigot.getPlugin().ftpType.equals("sftp"), isFTP = eBackupSpigot.getPlugin().ftpType.equals("ftp");
         if (!isSFTP && !isFTP) {
-            eBackup.getPlugin().getLogger().warning("Invalid upload type specified (only ftp/sftp accepted). Skipping upload...");
+            eBackupSpigot.getPlugin().getLogger().warning("Invalid upload type specified (only ftp/sftp accepted). Skipping upload...");
             return;
         }
 
-        eBackup.getPlugin().getLogger().info(String.format("Starting upload of %s to %s server...", fileName, isSFTP ? "SFTP" : "FTP"));
-        Bukkit.getScheduler().runTaskAsynchronously(eBackup.getPlugin(), () -> {
+        eBackupSpigot.getPlugin().getLogger().info(String.format("Starting upload of %s to %s server...", fileName, isSFTP ? "SFTP" : "FTP"));
+        Bukkit.getScheduler().runTaskAsynchronously(eBackupSpigot.getPlugin(), () -> {
             try {
-                eBackup.getPlugin().isInUpload.set(true);
+                eBackupSpigot.getPlugin().isInUpload.set(true);
 
                 File f = new File(fileName);
                 if (isSFTP) {
@@ -207,15 +207,15 @@ public class BackupUtil {
                 // delete testing file
                 if (testing) {
                     f.delete();
-                    eBackup.getPlugin().getLogger().info("Test upload successful!");
+                    eBackupSpigot.getPlugin().getLogger().info("Test upload successful!");
                 } else {
-                    eBackup.getPlugin().getLogger().info("Upload of " + fileName + " has succeeded!");
+                    eBackupSpigot.getPlugin().getLogger().info("Upload of " + fileName + " has succeeded!");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                eBackup.getPlugin().getLogger().info("Upload of " + fileName + " has failed.");
+                eBackupSpigot.getPlugin().getLogger().info("Upload of " + fileName + " has failed.");
             } finally {
-                eBackup.getPlugin().isInUpload.set(false);
+                eBackupSpigot.getPlugin().isInUpload.set(false);
             }
         });
     }
@@ -224,18 +224,18 @@ public class BackupUtil {
         JSch jsch = new JSch();
 
         // ssh key auth if enabled
-        if (eBackup.getPlugin().useSftpKeyAuth) {
-            if (eBackup.getPlugin().sftpPrivateKeyPassword.equals("")) {
-                jsch.addIdentity(eBackup.getPlugin().sftpPrivateKeyPath);
+        if (eBackupSpigot.getPlugin().useSftpKeyAuth) {
+            if (eBackupSpigot.getPlugin().sftpPrivateKeyPassword.equals("")) {
+                jsch.addIdentity(eBackupSpigot.getPlugin().sftpPrivateKeyPath);
             } else {
-                jsch.addIdentity(eBackup.getPlugin().sftpPrivateKeyPath, eBackup.getPlugin().sftpPrivateKeyPassword);
+                jsch.addIdentity(eBackupSpigot.getPlugin().sftpPrivateKeyPath, eBackupSpigot.getPlugin().sftpPrivateKeyPassword);
             }
         }
 
-        Session session = jsch.getSession(eBackup.getPlugin().ftpUser, eBackup.getPlugin().ftpHost, eBackup.getPlugin().ftpPort);
+        Session session = jsch.getSession(eBackupSpigot.getPlugin().ftpUser, eBackupSpigot.getPlugin().ftpHost, eBackupSpigot.getPlugin().ftpPort);
         // password auth if using password
-        if (!eBackup.getPlugin().useSftpKeyAuth) {
-            session.setPassword(eBackup.getPlugin().ftpPass);
+        if (!eBackupSpigot.getPlugin().useSftpKeyAuth) {
+            session.setPassword(eBackupSpigot.getPlugin().ftpPass);
         }
         session.setConfig("StrictHostKeyChecking", "no");
         session.connect();
@@ -243,11 +243,11 @@ public class BackupUtil {
         Channel channel = session.openChannel("sftp");
         channel.connect();
         ChannelSftp sftpChannel = (ChannelSftp) channel;
-        sftpChannel.put(f.getAbsolutePath(), eBackup.getPlugin().ftpPath);
+        sftpChannel.put(f.getAbsolutePath(), eBackupSpigot.getPlugin().ftpPath);
 
         if (testing) {
             // delete testing file
-            sftpChannel.rm(eBackup.getPlugin().ftpPath + "/" + f.getName());
+            sftpChannel.rm(eBackupSpigot.getPlugin().ftpPath + "/" + f.getName());
         }
 
         sftpChannel.exit();
@@ -266,13 +266,13 @@ public class BackupUtil {
             ftpClient.setDefaultTimeout(180 * 1000);
             ftpClient.setControlKeepAliveTimeout(60);
 
-            ftpClient.connect(eBackup.getPlugin().ftpHost, eBackup.getPlugin().ftpPort);
+            ftpClient.connect(eBackupSpigot.getPlugin().ftpHost, eBackupSpigot.getPlugin().ftpPort);
             ftpClient.enterLocalPassiveMode();
 
-            ftpClient.login(eBackup.getPlugin().ftpUser, eBackup.getPlugin().ftpPass);
+            ftpClient.login(eBackupSpigot.getPlugin().ftpUser, eBackupSpigot.getPlugin().ftpPass);
             ftpClient.setUseEPSVwithIPv4(true);
 
-            ftpClient.changeWorkingDirectory(eBackup.getPlugin().ftpPath);
+            ftpClient.changeWorkingDirectory(eBackupSpigot.getPlugin().ftpPath);
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
             ftpClient.setBufferSize(1024 * 1024 * 16);
 
@@ -297,12 +297,12 @@ public class BackupUtil {
     }
 
     private static void deleteAfterUpload(File f) {
-        if (eBackup.getPlugin().deleteAfterUpload) {
-            Bukkit.getScheduler().runTaskAsynchronously(eBackup.getPlugin(), () -> {
+        if (eBackupSpigot.getPlugin().deleteAfterUpload) {
+            Bukkit.getScheduler().runTaskAsynchronously(eBackupSpigot.getPlugin(), () -> {
                 if (f.delete()) {
-                    eBackup.getPlugin().getLogger().info("Successfully deleted " + f.getName() + " after upload.");
+                    eBackupSpigot.getPlugin().getLogger().info("Successfully deleted " + f.getName() + " after upload.");
                 } else {
-                    eBackup.getPlugin().getLogger().warning("Unable to delete " + f.getName() + " after upload.");
+                    eBackupSpigot.getPlugin().getLogger().warning("Unable to delete " + f.getName() + " after upload.");
                 }
             });
         }
@@ -313,7 +313,7 @@ public class BackupUtil {
         // don't ignore hidden folders
         // if (fileToZip.isHidden() && !fileToZip.getPath().equals(".")) return;
 
-        for (File f : eBackup.getPlugin().ignoredFiles) { // return if it is ignored file
+        for (File f : eBackupSpigot.getPlugin().ignoredFiles) { // return if it is ignored file
             if (f.getCanonicalPath().equals(fileToZip.getCanonicalPath())) return;
         }
 
@@ -355,7 +355,7 @@ public class BackupUtil {
                 }
                 fis.close();
             } catch (IOException e) {
-                eBackup.getPlugin().getLogger().warning("Error while backing up file " + fileName + ", backup will ignore this file: " + e.getMessage());
+                eBackupSpigot.getPlugin().getLogger().warning("Error while backing up file " + fileName + ", backup will ignore this file: " + e.getMessage());
             }
         }
     }

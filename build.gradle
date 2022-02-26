@@ -1,19 +1,28 @@
 plugins {
-	id 'java'
 	id 'com.github.johnrengelman.shadow' version '7.0.0' apply false
 }
 
-group = 'dev.espi'
-version = '1.0.0'
-
 subprojects {
+	apply plugin: 'java'
 	apply plugin: 'java-library'
 	apply plugin: 'maven-publish'
+	apply plugin: 'com.github.johnrengelman.shadow'
 
-	group = parent.group
-	version = parent.version
+	group = rootProject.maven_group
+	version = rootProject.version
 
-	def targetJavaVersion = property('javaVersion') as int
+	sourceSets {
+		main {
+			java {
+				if (project != project(":common")) {
+					srcDir project(':common').file('src/main/java')
+				}
+			}
+		}
+	}
+
+	def targetJavaVersion = project.javaVersion as int
+
 	java {
 		def javaVersion = JavaVersion.toVersion(targetJavaVersion)
 		sourceCompatibility = javaVersion
@@ -34,6 +43,16 @@ subprojects {
 	}
 
 	dependencies {
-		compileOnly('org.jetbrains:annotations:23.0.0')
+		if (project != project(":common")) api project(":common")
+		compileOnly('org.jetbrains:annotations:' + project.annotations_version)
+		implementation('com.cronutils:cron-utils:' + project.cron_utils_version)
+	}
+
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+			}
+		}
 	}
 }

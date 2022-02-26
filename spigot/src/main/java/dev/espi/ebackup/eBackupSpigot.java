@@ -21,6 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
+
+import static dev.espi.ebackup.eBackup.*;
 
 /*
    Copyright 2020 EspiDev
@@ -39,14 +42,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
  */
 
-public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
+public class eBackupSpigot extends JavaPlugin implements CommandExecutor, Listener {
 
     // lock
     AtomicBoolean isInBackup = new AtomicBoolean(false);
     AtomicBoolean isInUpload = new AtomicBoolean(false);
 
     // config options
-    String crontask, backupFormat, backupDateFormat;
+    String backupFormat, backupDateFormat;
     File backupPath;
     int maxBackups;
     boolean onlyBackupIfPlayersWereOn;
@@ -86,7 +89,7 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
         getServer().getPluginManager().registerEvents(this, this);
 
         // load config data
-        crontask = getConfig().getString("crontask");
+        cronTask = getConfig().getString("crontask");
         backupFormat = getConfig().getString("backup-format");
         backupDateFormat = getConfig().getString("backup-date-format");
         backupPath = new File(Objects.requireNonNull(getConfig().getString("backup-path"), "Backup path not set!"));
@@ -96,7 +99,7 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
         compressionLevel = getConfig().getInt("compression-level");
         if (!getConfig().contains("compression-level") || compressionLevel > 9 || compressionLevel < 0) {
             if (compressionLevel > 9 || compressionLevel < 0) {
-                getLogger().warning("Invalid compression level set! Must be between 0-9. Defaulting to 4.");
+                LOGGER.warning("Invalid compression level set! Must be between 0-9. Defaulting to 4.");
             }
             compressionLevel = 4;
         }
@@ -131,9 +134,9 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
         bukkitCronTask = Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
             if (CronUtil.run()) {
                 if (isInBackup.get()) {
-                    getLogger().warning("A backup was scheduled to happen now, but a backup was detected to be in progress. Skipping...");
+                    LOGGER.warning("A backup was scheduled to happen now, but a backup was detected to be in progress. Skipping...");
                 } else if (onlyBackupIfPlayersWereOn && !playersWereOnSinceLastBackup.get()) {
-                    getLogger().info("No players were detected to have joined since the last backup or server start, skipping backup...");
+                    LOGGER.info("No players were detected to have joined since the last backup or server start, skipping backup...");
                 } else {
                     BackupUtil.doBackup(true);
 
@@ -147,24 +150,24 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
 
     @Override
     public void onEnable() {
-        getLogger().info("Initializing eBackup...");
+        LOGGER.info("Initializing eBackupSpigot...");
 
         Objects.requireNonNull(this.getCommand("ebackup"), "ebackup command not initialized!")
                 .setExecutor(this);
 
         loadPlugin();
 
-        getLogger().info("Plugin initialized!");
+        LOGGER.info("Plugin initialized!");
     }
 
     @Override
     public void onDisable() {
         if (isInBackup.get() || isInUpload.get()) {
-            getLogger().info("Any running tasks (uploads or backups) will now be cancelled due to the server shutdown.");
+            LOGGER.info("Any running tasks (uploads or backups) will now be cancelled due to the server shutdown.");
         }
         Bukkit.getScheduler().cancelTasks(this);
 
-        getLogger().info("Disabled eBackup!");
+        LOGGER.info("Disabled eBackupSpigot!");
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -181,7 +184,7 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
 
         switch (args[0]) {
             case "help":
-                sender.sendMessage(ChatColor.GRAY + "" + ChatColor.STRIKETHROUGH + "=====" + ChatColor.RESET + ChatColor.DARK_AQUA + " eBackup v" + getPlugin().getDescription().getVersion() + " Help " + ChatColor.RESET + ChatColor.GRAY + ChatColor.STRIKETHROUGH + "=====");
+                sender.sendMessage(ChatColor.GRAY + "" + ChatColor.STRIKETHROUGH + "=====" + ChatColor.RESET + ChatColor.DARK_AQUA + " eBackupSpigot v" + getPlugin().getDescription().getVersion() + " Help " + ChatColor.RESET + ChatColor.GRAY + ChatColor.STRIKETHROUGH + "=====");
                 sender.sendMessage(ChatColor.AQUA + "> " + ChatColor.GRAY + "/ebackup backup - Starts a backup of the server.");
                 sender.sendMessage(ChatColor.AQUA + "> " + ChatColor.GRAY + "/ebackup backuplocal - Starts a backup of the server, but does not upload to FTP/SFTP.");
                 sender.sendMessage(ChatColor.AQUA + "> " + ChatColor.GRAY + "/ebackup list - Lists the backups in the folder.");
@@ -236,7 +239,7 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
             case "reload":
                 sender.sendMessage(ChatColor.GRAY + "Starting plugin reload...");
                 loadPlugin();
-                sender.sendMessage(ChatColor.GRAY + "Reloaded eBackup!");
+                sender.sendMessage(ChatColor.GRAY + "Reloaded eBackupSpigot!");
                 break;
             default:
                 sender.sendMessage(ChatColor.AQUA + "Do /ebackup help for help!");
@@ -245,8 +248,12 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
         return true;
     }
 
-    public static eBackup getPlugin() {
-        return (eBackup) Bukkit.getPluginManager().getPlugin("eBackup");
+    public static eBackupSpigot getPlugin() {
+        return (eBackupSpigot) Bukkit.getPluginManager().getPlugin("eBackupSpigot");
     }
 
+    @Override
+    public @NotNull Logger getLogger() {
+        return LOGGER;
+    }
 }
