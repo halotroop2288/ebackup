@@ -1,0 +1,13 @@
+name: eBackup
+version: '1.0.0'
+authors: [ EspiDev, halotroop2288 ]
+description: A simple and stable backup plugin.
+
+main: dev.espi.dev.espi.ebackup.eBackup
+api-version: 1.18
+
+commands:
+  ebackup:
+    description: Plugin base command.
+    aliases: eb
+    permission: ebackup.admin

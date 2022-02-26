@@ -1,6 +1,7 @@
 package dev.espi.ebackup;
 
 import com.cronutils.descriptor.CronDescriptor;
+import com.cronutils.model.Cron;
 import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.model.time.ExecutionTime;
@@ -8,6 +9,7 @@ import com.cronutils.parser.CronParser;
 
 import java.time.ZonedDateTime;
 import java.util.Locale;
+import java.util.Optional;
 
 /*
    Copyright 2020 EspiDev
@@ -27,7 +29,7 @@ import java.util.Locale;
 
 public class CronUtil {
 
-    static com.cronutils.model.Cron cron;
+    static Cron cron;
     static ExecutionTime executionTime;
     static ZonedDateTime nextExecution;
 
@@ -51,13 +53,15 @@ public class CronUtil {
         eBackup.getPlugin().getLogger().info("Configured the cron task to be: " + CronDescriptor.instance(Locale.UK).describe(cron));
 
         executionTime = ExecutionTime.forCron(cron);
-        nextExecution = executionTime.nextExecution(ZonedDateTime.now()).get();
+        Optional<ZonedDateTime> zdt = executionTime.nextExecution(ZonedDateTime.now());
+        zdt.ifPresent(next -> nextExecution = next);
     }
 
     public static boolean run() {
         ZonedDateTime time = ZonedDateTime.now();
         if (nextExecution.isBefore(time)) {
-            nextExecution = executionTime.nextExecution(time).get();
+            Optional<ZonedDateTime> zdt = executionTime.nextExecution(time);
+            zdt.ifPresent(next -> nextExecution = next);
             return true;
         } else {
             return false;

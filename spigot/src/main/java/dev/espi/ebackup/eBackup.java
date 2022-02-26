@@ -1,24 +1,25 @@
 package dev.espi.ebackup;
 
-import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.Listener;
-import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /*
@@ -88,7 +89,7 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
         crontask = getConfig().getString("crontask");
         backupFormat = getConfig().getString("backup-format");
         backupDateFormat = getConfig().getString("backup-date-format");
-        backupPath = new File(getConfig().getString("backup-path"));
+        backupPath = new File(Objects.requireNonNull(getConfig().getString("backup-path"), "Backup path not set!"));
         maxBackups = getConfig().getInt("max-backups");
         onlyBackupIfPlayersWereOn = getConfig().getBoolean("only-backup-if-players-were-on");
         deleteAfterUpload = getConfig().getBoolean("delete-after-upload");
@@ -148,12 +149,8 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
     public void onEnable() {
         getLogger().info("Initializing eBackup...");
 
-        try {
-            Metrics metrics = new Metrics(this);
-        } catch (NoClassDefFoundError ignored) {
-            // ignore if metrics is broken for old versions
-        }
-        this.getCommand("ebackup").setExecutor(this);
+        Objects.requireNonNull(this.getCommand("ebackup"), "ebackup command not initialized!")
+                .setExecutor(this);
 
         loadPlugin();
 
@@ -176,7 +173,7 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
         if (args.length == 0) {
             sender.sendMessage(ChatColor.AQUA + "Do /ebackup help for help!");
             return true;
@@ -216,8 +213,11 @@ public class eBackup extends JavaPlugin implements CommandExecutor, Listener {
                 break;
             case "list":
                 sender.sendMessage(ChatColor.AQUA + "Local Backups:");
-                for (File f : getPlugin().backupPath.listFiles()) {
-                    sender.sendMessage(ChatColor.GRAY + "- " + f.getName());
+                File[] files = getPlugin().backupPath.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        sender.sendMessage(ChatColor.GRAY + "- " + f.getName());
+                    }
                 }
                 break;
             case "stats":

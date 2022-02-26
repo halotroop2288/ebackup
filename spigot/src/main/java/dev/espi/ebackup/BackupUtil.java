@@ -13,8 +13,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 /*
    Copyright 2020 EspiDev
@@ -42,10 +40,13 @@ public class BackupUtil {
         int backups = 0;
         SortedMap<Long, File> m = new TreeMap<>(); // oldest files to newest
 
-        for (File f : eBackup.getPlugin().backupPath.listFiles()) {
-            if (f.getName().endsWith(".zip")) {
-                backups++;
-                m.put(f.lastModified(), f);
+        File[] files = eBackup.getPlugin().backupPath.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                if (f.getName().endsWith(".zip")) {
+                    backups++;
+                    m.put(f.lastModified(), f);
+                }
             }
         }
 
@@ -58,6 +59,7 @@ public class BackupUtil {
 
     // actually do the backup
     // run async please
+    @SuppressWarnings("BusyWait")
     public static void doBackup(boolean uploadToServer) {
         List<File> tempIgnore = new ArrayList<>();
         eBackup.getPlugin().getLogger().info("Starting backup...");
@@ -75,10 +77,13 @@ public class BackupUtil {
 
         try {
             // find plugin data to ignore
-            for (File f : new File("plugins").listFiles()) {
-                if ((!eBackup.getPlugin().backupPluginJars && f.getName().endsWith(".jar")) || (!eBackup.getPlugin().backupPluginConfs && f.isDirectory())) {
-                    tempIgnore.add(f);
-                    eBackup.getPlugin().ignoredFiles.add(f);
+            File[] files = new File("plugins").listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if ((!eBackup.getPlugin().backupPluginJars && f.getName().endsWith(".jar")) || (!eBackup.getPlugin().backupPluginConfs && f.isDirectory())) {
+                        tempIgnore.add(f);
+                        eBackup.getPlugin().ignoredFiles.add(f);
+                    }
                 }
             }
 
@@ -333,8 +338,10 @@ public class BackupUtil {
             }
             zipOut.closeEntry();
             File[] children = fileToZip.listFiles();
-            for (File childFile : children) {
-                zipFile(childFile, fileName + "/" + childFile.getName(), zipOut);
+            if (children != null) {
+                for (File childFile : children) {
+                    zipFile(childFile, fileName + "/" + childFile.getName(), zipOut);
+                }
             }
         } else { // if it's a file, store
             try {
